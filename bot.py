@@ -34,6 +34,10 @@ caps_limit = 70
 
 
 # ================= FORM EKLEMELERİ =================
+import discord
+from discord.ui import Modal, TextInput
+
+# İstekler Modalı
 class IsteklerModal(Modal):
     def __init__(self):
         super().__init__(title="İstekleriniz Formu")
@@ -43,6 +47,7 @@ class IsteklerModal(Modal):
         await interaction.response.send_message(f"İstekleriniz alındı: {self.istekler.value}", ephemeral=True)
 
 
+# Partner Modalı
 class PartnerModal(Modal):
     def __init__(self):
         super().__init__(title="Partner Formu")
@@ -52,13 +57,14 @@ class PartnerModal(Modal):
         await interaction.response.send_message(f"Partner bilgisi alındı: {self.partner.value}", ephemeral=True)
 
 
+# Plugin Paylaşım Formu
 class PluginModal(Modal):
     def __init__(self):
         super().__init__(title="Plugin Paylaşım Formu")
         self.isim = TextInput(label="Plugin İsmi", max_length=100)
         self.surum = TextInput(label="Sürüm", max_length=50)
         self.aciklama = TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
-        self.link = TextInput(label="İndirme Linki", placeholder="https://")
+        self.link = TextInput(label="İndirme Linki", placeholder="https://", max_length=200)
 
     async def on_submit(self, interaction: discord.Interaction):
         embed = discord.Embed(title="🔧 Plugin Paylaşımı", color=0x2ecc71)
@@ -69,12 +75,13 @@ class PluginModal(Modal):
         await interaction.response.send_message(embed=embed)
 
 
+# Pack Paylaşım Formu
 class PackModal(Modal):
     def __init__(self):
         super().__init__(title="Pack Paylaşım Formu")
-        self.isim = TextInput(label="Pack İsmi")
-        self.surum = TextInput(label="Sürüm")
-        self.link = TextInput(label="Link", placeholder="https://")
+        self.isim = TextInput(label="Pack İsmi", max_length=100)
+        self.surum = TextInput(label="Sürüm", max_length=50)
+        self.link = TextInput(label="Link", placeholder="https://", max_length=200)
 
     async def on_submit(self, interaction: discord.Interaction):
         embed = discord.Embed(title="📦 Pack Paylaşımı", color=0x3498db)
@@ -82,7 +89,6 @@ class PackModal(Modal):
         embed.add_field(name="Sürüm", value=self.surum.value, inline=False)
         embed.add_field(name="Link", value=self.link.value, inline=False)
         await interaction.response.send_message(embed=embed)
-
 
 # ================= READY =================
 @bot.event
