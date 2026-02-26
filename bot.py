@@ -3,13 +3,18 @@ from discord.ext import commands
 from discord import app_commands
 import os
 
-TOKEN = os.getenv("TOKEN")  # veya direkt token yaz
+# Bot token'ını çevresel değişkenden alıyoruz
+TOKEN = os.getenv("TOKEN")  # Eğer environment variable kullanıyorsanız
+
+# Eğer doğrudan token yazıyorsanız:
+# TOKEN = "YOUR_DISCORD_BOT_TOKEN" 
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# Yetkili rollerin ID'lerini belirliyoruz
 YETKILI_ROLLER = [
     1384294618195169311,
     1474830960393453619,
@@ -73,8 +78,9 @@ def kullanici_yetkili():
 
 @bot.event
 async def on_ready():
-    await bot.tree.sync()
-    print(f"Bot hazır: {bot.user}")
+    print(f"Bot hazır: {bot.user}")  # Botun adı ve ID'si
+    await bot.tree.sync()  # Komutları senkronize et
+    print("Komutlar senkronize edildi.")
 
 # ✅ Slash Komutlar
 @bot.tree.command(name="partnerbasvurusu")
@@ -110,4 +116,11 @@ async def sunucupaylas(interaction: discord.Interaction):
 async def botpaylas(interaction: discord.Interaction):
     await interaction.response.send_modal(BotModal())
 
+# Hata durumunda bilgiyi loglamak için
+@bot.event
+async def on_error(event, *args, **kwargs):
+    print(f"Error occurred in event: {event}")
+    print(f"Error details: {args}, {kwargs}")
+
+# Botu çalıştırma
 bot.run(TOKEN)
