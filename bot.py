@@ -32,6 +32,7 @@ class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
     partner_isim = discord.ui.TextInput(label="Partner İsmi")
     aciklama = discord.ui.TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
     sunucu_uyelik = discord.ui.TextInput(label="Sunucu Üyelik (Sayı)", placeholder="Örneğin: 1500")
+    sunucu_link = discord.ui.TextInput(label="Sunucu Linki", placeholder="https://")
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
@@ -45,6 +46,7 @@ class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
         embed.add_field(name="Partner İsmi", value=self.partner_isim.value, inline=False)
         embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
         embed.add_field(name="Sunucu Üyelik", value=str(sunucu_uyelik), inline=False)
+        embed.add_field(name="Sunucu Linki", value=self.sunucu_link.value, inline=False)
 
         # Başvuru bilgilerini partner-onay kanalına gönder
         channel = bot.get_channel(PARTNER_BASVURU_KANAL_ID)
@@ -163,6 +165,7 @@ async def on_interaction(interaction: discord.Interaction):
             embed.add_field(name="Partner İsmi", value=interaction.message.embeds[0].fields[0].value, inline=False)
             embed.add_field(name="Açıklama", value=interaction.message.embeds[0].fields[1].value, inline=False)
             embed.add_field(name="Sunucu Üyelik", value=interaction.message.embeds[0].fields[2].value, inline=False)
+            embed.add_field(name="Sunucu Linki", value=interaction.message.embeds[0].fields[3].value, inline=False)
             channel = bot.get_channel(ONAY_KANAL_ID)
             if channel:
                 await channel.send(embed=embed)
