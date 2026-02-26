@@ -177,4 +177,3 @@ async def on_error(event, *args, **kwargs):
 
 # Botu çalıştırma
 bot.run(TOKEN)
-``
