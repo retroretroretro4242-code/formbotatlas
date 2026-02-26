@@ -33,6 +33,57 @@ banned_words = ["küfür1", "küfür2"]
 caps_limit = 70
 
 
+# ================= FORM EKLEMELERİ =================
+class IsteklerModal(Modal):
+    def __init__(self):
+        super().__init__(title="İstekleriniz Formu")
+        self.istekler = TextInput(label="İsteklerinizi buraya yazın", style=discord.TextStyle.paragraph)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.send_message(f"İstekleriniz alındı: {self.istekler.value}", ephemeral=True)
+
+
+class PartnerModal(Modal):
+    def __init__(self):
+        super().__init__(title="Partner Formu")
+        self.partner = TextInput(label="Partner adı", max_length=100)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.send_message(f"Partner bilgisi alındı: {self.partner.value}", ephemeral=True)
+
+
+class PluginModal(Modal):
+    def __init__(self):
+        super().__init__(title="Plugin Paylaşım Formu")
+        self.isim = TextInput(label="Plugin İsmi", max_length=100)
+        self.surum = TextInput(label="Sürüm", max_length=50)
+        self.aciklama = TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
+        self.link = TextInput(label="İndirme Linki", placeholder="https://")
+
+    async def on_submit(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="🔧 Plugin Paylaşımı", color=0x2ecc71)
+        embed.add_field(name="İsim", value=self.isim.value, inline=False)
+        embed.add_field(name="Sürüm", value=self.surum.value, inline=False)
+        embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
+        embed.add_field(name="Link", value=self.link.value, inline=False)
+        await interaction.response.send_message(embed=embed)
+
+
+class PackModal(Modal):
+    def __init__(self):
+        super().__init__(title="Pack Paylaşım Formu")
+        self.isim = TextInput(label="Pack İsmi")
+        self.surum = TextInput(label="Sürüm")
+        self.link = TextInput(label="Link", placeholder="https://")
+
+    async def on_submit(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="📦 Pack Paylaşımı", color=0x3498db)
+        embed.add_field(name="İsim", value=self.isim.value, inline=False)
+        embed.add_field(name="Sürüm", value=self.surum.value, inline=False)
+        embed.add_field(name="Link", value=self.link.value, inline=False)
+        await interaction.response.send_message(embed=embed)
+
+
 # ================= READY =================
 @bot.event
 async def on_ready():
@@ -264,35 +315,6 @@ async def ticketpanel(interaction: discord.Interaction):
     )
 
 
-# ================= FORM EKLEMELERİ =================
-class PluginModal(discord.ui.Modal, title="Plugin Paylaşım Formu"):
-    isim = discord.ui.TextInput(label="Plugin İsmi", max_length=100)
-    surum = discord.ui.TextInput(label="Sürüm", max_length=50)
-    aciklama = discord.ui.TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
-    link = discord.ui.TextInput(label="İndirme Linki", placeholder="https://")
-
-    async def on_submit(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="🔧 Plugin Paylaşımı", color=0x2ecc71)
-        embed.add_field(name="İsim", value=self.isim.value, inline=False)
-        embed.add_field(name="Sürüm", value=self.surum.value, inline=False)
-        embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
-        embed.add_field(name="Link", value=self.link.value, inline=False)
-        await interaction.response.send_message(embed=embed)
-
-
-class PackModal(discord.ui.Modal, title="Pack Paylaşım Formu"):
-    isim = discord.ui.TextInput(label="Pack İsmi")
-    surum = discord.ui.TextInput(label="Sürüm")
-    link = discord.ui.TextInput(label="Link", placeholder="https://")
-
-    async def on_submit(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="📦 Pack Paylaşımı", color=0x3498db)
-        embed.add_field(name="İsim", value=self.isim.value, inline=False)
-        embed.add_field(name="Sürüm", value=self.surum.value, inline=False)
-        embed.add_field(name="Link", value=self.link.value, inline=False)
-        await interaction.response.send_message(embed=embed)
-
-
 # ================= Slash Komutları =================
 @bot.tree.command(name="pluginpaylas")
 async def pluginpaylas(interaction: discord.Interaction):
@@ -302,7 +324,6 @@ async def pluginpaylas(interaction: discord.Interaction):
 async def packpaylas(interaction: discord.Interaction):
     await interaction.response.send_modal(PackModal())  # Pack formu
 
-# ✅ Slash komutlar
 @bot.tree.command(name="istekgönder")
 async def istekgonder(interaction: discord.Interaction):
     await interaction.response.send_modal(IsteklerModal())  # İstekler formu
