@@ -21,56 +21,81 @@ YETKILI_ROLLER = [
 # ✅ Partner Başvuru Modal
 class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
     partner_isim = discord.ui.TextInput(label="Partner İsmi")
-    sunucu_ismi = discord.ui.TextInput(label="Sunucu İsmi")
-    sunucu_uyelik = discord.ui.TextInput(label="Sunucu Üyelik Sayısı", placeholder="100'den fazla ise everyone zorunlu değil")
-
-    async def on_submit(self, interaction: discord.Interaction):
-        sunucu_uyelik = int(self.sunucu_uyelik.value)
-        
-        # 100'den azsa, everyone zorunlu
-        if sunucu_uyelik < 100:
-            await interaction.response.send_message(
-                f"{interaction.user.mention} başvurunuz alındı. Sunucunuz 100'den az üyeye sahipse **everyone** rolü zorunludur.",
-                ephemeral=True
-            )
-        else:
-            await interaction.response.send_message(
-                f"{interaction.user.mention} başvurunuz alındı, partnerlik başvurunuz değerlendirilecektir.",
-                ephemeral=True
-            )
-
-# ✅ Partner Paylaşım Modal
-class PartnerPaylasModal(discord.ui.Modal, title="Partner Paylaşım Formu"):
-    isim = discord.ui.TextInput(label="Partner İsmi")
     aciklama = discord.ui.TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
 
     async def on_submit(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="Partner Paylaşımı", color=0x9b59b6)
-        embed.add_field(name="İsim", value=self.isim.value, inline=False)
+        embed = discord.Embed(title="🤝 Partner Başvurusu", color=0x2ecc71)
+        embed.add_field(name="Partner İsmi", value=self.partner_isim.value, inline=False)
+        embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
+        
+        # Partner başvurusu bilgilerini partner-onay kanalına gönder
+        channel = discord.utils.get(interaction.guild.text_channels, name="partner-onay")
+        if channel:
+            await channel.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
+
+# ✅ Partner Paylaşım Modal
+class PartnerPaylasModal(discord.ui.Modal, title="Partner Paylaşım Formu"):
+    partner_isim = discord.ui.TextInput(label="Partner İsmi")
+    aciklama = discord.ui.TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="🤝 Partner Paylaşımı", color=0x3498db)
+        embed.add_field(name="Partner İsmi", value=self.partner_isim.value, inline=False)
         embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
         await interaction.response.send_message(embed=embed)
 
-# ✅ Partner Başvurusu Komutu
-@bot.tree.command(name="partnerbasvurusu")
-async def partnerbasvurusu(interaction: discord.Interaction):
-    await interaction.response.send_modal(PartnerBasvuruModal())
+# ✅ İstek Modal
+class IstekModal(discord.ui.Modal, title="İstek Formu"):
+    istek = discord.ui.TextInput(label="İstek", style=discord.TextStyle.paragraph)
 
-# ✅ Partner Paylaşım Komutu (Yalnızca kabul edilen partnerler için)
-@bot.tree.command(name="partnerpaylas")
-@commands.has_any_role(*YETKILI_ROLLER)  # Yalnızca yetkili roller için
-async def partnerpaylas(interaction: discord.Interaction):
-    await interaction.response.send_modal(PartnerPaylasModal())  # Partner paylaşım formunu gönder
+    async def on_submit(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="📨 İstek", color=0xf1c40f)
+        embed.add_field(name="İstek", value=self.istek.value, inline=False)
+        await interaction.response.send_message(embed=embed)
 
-# ✅ Kullanıcı Yetkili Kontrolü
 def kullanici_yetkili():
     async def predicate(interaction: discord.Interaction):
         return any(role.id in YETKILI_ROLLER for role in interaction.user.roles)
     return app_commands.check(predicate)
 
-# Bot hazır olduğunda konsola yazdırma
 @bot.event
 async def on_ready():
     await bot.tree.sync()
     print(f"Bot hazır: {bot.user}")
+
+# ✅ Slash Komutlar
+@bot.tree.command(name="partnerbasvurusu")
+async def partnerbasvurusu(interaction: discord.Interaction):
+    await interaction.response.send_modal(PartnerBasvuruModal())
+
+@bot.tree.command(name="partnerpaylas")
+@kullanici_yetkili()
+async def partnerpaylas(interaction: discord.Interaction):
+    await interaction.response.send_modal(PartnerPaylasModal())
+
+@bot.tree.command(name="istek")
+async def istek(interaction: discord.Interaction):
+    await interaction.response.send_modal(IstekModal())
+
+@bot.tree.command(name="pluginpaylas")
+@kullanici_yetkili()
+async def pluginpaylas(interaction: discord.Interaction):
+    await interaction.response.send_modal(PluginModal())
+
+@bot.tree.command(name="packpaylas")
+@kullanici_yetkili()
+async def packpaylas(interaction: discord.Interaction):
+    await interaction.response.send_modal(PackModal())
+
+@bot.tree.command(name="sunucupaylas")
+@kullanici_yetkili()
+async def sunucupaylas(interaction: discord.Interaction):
+    await interaction.response.send_modal(SunucuModal())
+
+@bot.tree.command(name="botpaylas")
+@kullanici_yetkili()
+async def botpaylas(interaction: discord.Interaction):
+    await interaction.response.send_modal(BotModal())
 
 bot.run(TOKEN)
