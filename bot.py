@@ -32,6 +32,7 @@ class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
     async def on_submit(self, interaction: discord.Interaction):
         # 'sunucu_uyelik' alanındaki değeri sayıya dönüştürmeden önce kontrol edelim
         try:
+            # Kullanıcının girdiği değeri sayıya dönüştürmeye çalışıyoruz
             sunucu_uyelik = int(self.sunucu_uyelik.value)  # Sayıya dönüştürme
         except ValueError:
             # Eğer kullanıcı geçerli bir sayı girmezse hata mesajı verelim
@@ -49,6 +50,7 @@ class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
         if channel:
             await channel.send(embed=embed)
 
+        await interaction.response.send_message(embed=embed)
         await interaction.response.send_message(embed=embed)
 
 # ✅ Partner Paylaşım Modal
