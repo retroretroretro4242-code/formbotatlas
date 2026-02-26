@@ -22,16 +22,28 @@ YETKILI_ROLLER = [
 class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
     partner_isim = discord.ui.TextInput(label="Partner İsmi")
     aciklama = discord.ui.TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
+    sunucu_uyelik = discord.ui.TextInput(label="Sunucu Üyelik (Sayı)", placeholder="Örneğin: 1500")
 
     async def on_submit(self, interaction: discord.Interaction):
+        # 'sunucu_uyelik' alanındaki değeri sayıya dönüştürmeden önce kontrol edelim
+        try:
+            sunucu_uyelik = int(self.sunucu_uyelik.value)  # Sayıya dönüştürme
+        except ValueError:
+            # Eğer kullanıcı geçerli bir sayı girmezse hata mesajı verelim
+            await interaction.response.send_message("Sunucu üyelik sayısını geçerli bir sayı olarak girmeniz gerekiyor!", ephemeral=True)
+            return
+
+        # Başvuruyu embed olarak gönderme
         embed = discord.Embed(title="🤝 Partner Başvurusu", color=0x2ecc71)
         embed.add_field(name="Partner İsmi", value=self.partner_isim.value, inline=False)
         embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
-        
+        embed.add_field(name="Sunucu Üyelik", value=str(sunucu_uyelik), inline=False)
+
         # Partner başvurusu bilgilerini partner-onay kanalına gönder
         channel = discord.utils.get(interaction.guild.text_channels, name="partner-onay")
         if channel:
             await channel.send(embed=embed)
+
         await interaction.response.send_message(embed=embed)
 
 # ✅ Partner Paylaşım Modal
