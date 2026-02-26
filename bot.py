@@ -23,6 +23,10 @@ YETKILI_ROLLER = [
     1474831132062122005
 ]
 
+# Kanalların ID'leri
+ISTEK_KANAL_ID = 1475095722864017478  # İstek komutunun geçerli olduğu kanal
+PARTNER_KANAL_ID = 1476535145963192360  # Partner komutunun geçerli olduğu kanal
+
 # ✅ Partner Başvuru Modal
 class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
     partner_isim = discord.ui.TextInput(label="Partner İsmi")
@@ -129,6 +133,12 @@ def kullanici_yetkili():
         return any(role.id in YETKILI_ROLLER for role in interaction.user.roles)
     return app_commands.check(predicate)
 
+# Kanal Kontrolü (istek ve partner komutları için)
+def kanal_check(kanal_id):
+    async def predicate(interaction: discord.Interaction):
+        return interaction.channel.id == kanal_id
+    return app_commands.check(predicate)
+
 @bot.event
 async def on_ready():
     print(f"Bot hazır: {bot.user}")  # Botun adı ve ID'si
@@ -142,10 +152,12 @@ async def partnerbasvurusu(interaction: discord.Interaction):
 
 @bot.tree.command(name="partnerpaylas")
 @kullanici_yetkili()
+@kanal_check(PARTNER_KANAL_ID)
 async def partnerpaylas(interaction: discord.Interaction):
     await interaction.response.send_modal(PartnerPaylasModal())
 
 @bot.tree.command(name="istek")
+@kanal_check(ISTEK_KANAL_ID)
 async def istek(interaction: discord.Interaction):
     await interaction.response.send_modal(IstekModal())
 
@@ -168,12 +180,6 @@ async def sunucupaylas(interaction: discord.Interaction):
 @kullanici_yetkili()
 async def botpaylas(interaction: discord.Interaction):
     await interaction.response.send_modal(BotModal())
-
-# Hata durumunda bilgiyi loglamak için
-@bot.event
-async def on_error(event, *args, **kwargs):
-    print(f"Error occurred in event: {event}")
-    print(f"Error details: {args}, {kwargs}")
 
 # Botu çalıştırma
 bot.run(TOKEN)
