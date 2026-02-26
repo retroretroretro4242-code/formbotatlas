@@ -3,16 +3,20 @@ from discord.ext import commands
 from discord import app_commands
 import os
 
-# Bot token'ı environment variable'dan alınıyor
 TOKEN = os.getenv("TOKEN")  # Eğer environment variable kullanıyorsanız
-
 # Eğer doğrudan token yazıyorsanız:
-# TOKEN = "YOUR_DISCORD_BOT_TOKEN" 
+# TOKEN = "YOUR_DISCORD_BOT_TOKEN"
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+# Kanal ID'leri
+ISTEK_KANAL_ID = 1475095722864017478
+PARTNER_KANAL_ID = 1476535145963192360
+PARTNER_BASVURU_KANAL_ID = 1476538995231162418
+ONAY_KANAL_ID = 1475013100229890159
 
 # Yetkili rollerin ID'lerini belirliyoruz
 YETKILI_ROLLER = [
@@ -22,10 +26,6 @@ YETKILI_ROLLER = [
     1474831132062122005,
     1474831132062122005
 ]
-
-# Kanalların ID'leri
-ISTEK_KANAL_ID = 1475095722864017478  # İstek komutunun geçerli olduğu kanal
-PARTNER_KANAL_ID = 1476535145963192360  # Partner komutunun geçerli olduğu kanal
 
 # ✅ Partner Başvuru Modal
 class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
@@ -40,18 +40,26 @@ class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
             await interaction.response.send_message("Sunucu üyelik sayısını geçerli bir sayı olarak girmeniz gerekiyor!", ephemeral=True)
             return
 
-        # Başvuruyu embed olarak gönderme
+        # Başvuru embed olarak partner başvuru kanalına gönderilecek
         embed = discord.Embed(title="🤝 Partner Başvurusu", color=0x2ecc71)
         embed.add_field(name="Partner İsmi", value=self.partner_isim.value, inline=False)
         embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
         embed.add_field(name="Sunucu Üyelik", value=str(sunucu_uyelik), inline=False)
 
-        # Partner başvurusu bilgilerini partner-onay kanalına gönder
-        channel = discord.utils.get(interaction.guild.text_channels, name="partner-onay")
+        # Başvuru bilgilerini partner-onay kanalına gönder
+        channel = bot.get_channel(PARTNER_BASVURU_KANAL_ID)
         if channel:
-            await channel.send(embed=embed)
+            # Onay ve Red butonları ekleniyor
+            view = discord.ui.View()
+            onay_button = discord.ui.Button(label="Onayla", style=discord.ButtonStyle.green, custom_id="onay")
+            red_button = discord.ui.Button(label="Reddet", style=discord.ButtonStyle.red, custom_id="red")
 
-        await interaction.response.send_message(embed=embed)
+            view.add_item(onay_button)
+            view.add_item(red_button)
+
+            await channel.send(embed=embed, view=view)
+
+        await interaction.response.send_message("Başvurunuz alındı ve onay için yetkililere iletildi.", ephemeral=True)
 
 # ✅ Partner Paylaşım Modal
 class PartnerPaylasModal(discord.ui.Modal, title="Partner Paylaşım Formu"):
@@ -127,13 +135,13 @@ class BotModal(discord.ui.Modal, title="Discord Bot Paylaşımı"):
         embed.add_field(name="Link", value=self.link.value, inline=False)
         await interaction.response.send_message(embed=embed)
 
-# Yetki Kontrolü
+# Yetkili kontrolü
 def kullanici_yetkili():
     async def predicate(interaction: discord.Interaction):
         return any(role.id in YETKILI_ROLLER for role in interaction.user.roles)
     return app_commands.check(predicate)
 
-# Kanal Kontrolü (istek ve partner komutları için)
+# Kanal kontrolü (istek ve partner komutları için)
 def kanal_check(kanal_id):
     async def predicate(interaction: discord.Interaction):
         return interaction.channel.id == kanal_id
@@ -141,9 +149,28 @@ def kanal_check(kanal_id):
 
 @bot.event
 async def on_ready():
-    print(f"Bot hazır: {bot.user}")  # Botun adı ve ID'si
+    print(f"Bot hazır: {bot.user}")
     await bot.tree.sync()  # Komutları senkronize et
     print("Komutlar senkronize edildi.")
+
+# Onay ve Red butonlarının işleyişi
+@bot.event
+async def on_interaction(interaction: discord.Interaction):
+    if interaction.type == discord.InteractionType.component:
+        if interaction.data["custom_id"] == "onay":
+            # Onaylandığında partner başvurusu bilgilerini ONAY_KANAL_ID kanalına gönder
+            embed = discord.Embed(title="✅ Partner Başvurusu Onaylandı", color=0x2ecc71)
+            embed.add_field(name="Partner İsmi", value=interaction.message.embeds[0].fields[0].value, inline=False)
+            embed.add_field(name="Açıklama", value=interaction.message.embeds[0].fields[1].value, inline=False)
+            embed.add_field(name="Sunucu Üyelik", value=interaction.message.embeds[0].fields[2].value, inline=False)
+            channel = bot.get_channel(ONAY_KANAL_ID)
+            if channel:
+                await channel.send(embed=embed)
+            await interaction.response.send_message("Başvuru onaylandı ve ilgili kanala gönderildi.", ephemeral=True)
+
+        elif interaction.data["custom_id"] == "red":
+            # Red edildiğinde kullanıcıya reddedildi mesajı gönder
+            await interaction.response.send_message("Başvuru reddedildi.", ephemeral=True)
 
 # ✅ Slash Komutlar
 @bot.tree.command(name="partnerbasvurusu")
@@ -181,5 +208,4 @@ async def sunucupaylas(interaction: discord.Interaction):
 async def botpaylas(interaction: discord.Interaction):
     await interaction.response.send_modal(BotModal())
 
-# Botu çalıştırma
 bot.run(TOKEN)
