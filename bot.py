@@ -21,19 +21,23 @@ YETKILI_ROLLER = [
 # ✅ Partner Başvuru Modal
 class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
     partner_isim = discord.ui.TextInput(label="Partner İsmi")
-    aciklama = discord.ui.TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
+    sunucu_ismi = discord.ui.TextInput(label="Sunucu İsmi")
+    sunucu_uyelik = discord.ui.TextInput(label="Sunucu Üyelik Sayısı", placeholder="100'den fazla ise everyone zorunlu değil")
 
     async def on_submit(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="Partner Başvurusu", color=0x9b59b6)
-        embed.add_field(name="Partner İsmi", value=self.partner_isim.value, inline=False)
-        embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
-
-        # Partner başvurusu onaylandığında, belirtilen kanala gönderilecektir.
-        partner_channel = discord.utils.get(interaction.guild.text_channels, name="partner-onay")
-        if partner_channel:
-            await partner_channel.send(embed=embed)
-
-        await interaction.response.send_message("Başvurunuz alındı, yetkililer tarafından değerlendirilecektir.", ephemeral=True)
+        sunucu_uyelik = int(self.sunucu_uyelik.value)
+        
+        # 100'den azsa, everyone zorunlu
+        if sunucu_uyelik < 100:
+            await interaction.response.send_message(
+                f"{interaction.user.mention} başvurunuz alındı. Sunucunuz 100'den az üyeye sahipse **everyone** rolü zorunludur.",
+                ephemeral=True
+            )
+        else:
+            await interaction.response.send_message(
+                f"{interaction.user.mention} başvurunuz alındı, partnerlik başvurunuz değerlendirilecektir.",
+                ephemeral=True
+            )
 
 # ✅ Partner Paylaşım Modal
 class PartnerPaylasModal(discord.ui.Modal, title="Partner Paylaşım Formu"):
@@ -46,43 +50,22 @@ class PartnerPaylasModal(discord.ui.Modal, title="Partner Paylaşım Formu"):
         embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
         await interaction.response.send_message(embed=embed)
 
-# ✅ İstek Modal
-class IstekModal(discord.ui.Modal, title="İstek Formu"):
-    istek = discord.ui.TextInput(label="İsteklerinizi buraya yazın", style=discord.TextStyle.paragraph)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.send_message(f"İstekleriniz alındı: {self.istek.value}", ephemeral=True)
-
-# ✅ Slash komutlar
-@bot.tree.command(name="pluginpaylas")
-async def pluginpaylas(interaction: discord.Interaction):
-    await interaction.response.send_modal(PluginModal())  # Plugin formu
-
-@bot.tree.command(name="packpaylas")
-async def packpaylas(interaction: discord.Interaction):
-    await interaction.response.send_modal(PackModal())  # Pack formu
-
-@bot.tree.command(name="sunucupaylas")
-async def sunucupaylas(interaction: discord.Interaction):
-    await interaction.response.send_modal(SunucuModal())  # Sunucu formu
-
-@bot.tree.command(name="botpaylas")
-async def botpaylas(interaction: discord.Interaction):
-    await interaction.response.send_modal(BotModal())  # Bot formu
-
-# ✅ Yeni Slash Komutları
+# ✅ Partner Başvurusu Komutu
 @bot.tree.command(name="partnerbasvurusu")
 async def partnerbasvurusu(interaction: discord.Interaction):
-    await interaction.response.send_modal(PartnerBasvuruModal())  # Partner başvuru formu
+    await interaction.response.send_modal(PartnerBasvuruModal())
 
+# ✅ Partner Paylaşım Komutu (Yalnızca kabul edilen partnerler için)
 @bot.tree.command(name="partnerpaylas")
 @commands.has_any_role(*YETKILI_ROLLER)  # Yalnızca yetkili roller için
 async def partnerpaylas(interaction: discord.Interaction):
     await interaction.response.send_modal(PartnerPaylasModal())  # Partner paylaşım formunu gönder
 
-@bot.tree.command(name="istek")
-async def istek(interaction: discord.Interaction):
-    await interaction.response.send_modal(IstekModal())  # İstek formu
+# ✅ Kullanıcı Yetkili Kontrolü
+def kullanici_yetkili():
+    async def predicate(interaction: discord.Interaction):
+        return any(role.id in YETKILI_ROLLER for role in interaction.user.roles)
+    return app_commands.check(predicate)
 
 # Bot hazır olduğunda konsola yazdırma
 @bot.event
