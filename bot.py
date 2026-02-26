@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import os
 
-# Bot token'ını çevresel değişkenden alıyoruz
+# Bot token'ı environment variable'dan alınıyor
 TOKEN = os.getenv("TOKEN")  # Eğer environment variable kullanıyorsanız
 
 # Eğer doğrudan token yazıyorsanız:
@@ -50,7 +50,6 @@ class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
         if channel:
             await channel.send(embed=embed)
 
-        await interaction.response.send_message(embed=embed)
         await interaction.response.send_message(embed=embed)
 
 # ✅ Partner Paylaşım Modal
