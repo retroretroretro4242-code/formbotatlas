@@ -2,6 +2,7 @@ import os
 import discord
 from discord.ext import commands
 from discord import app_commands
+from discord.ui import Modal, TextInput
 import time
 import datetime
 from collections import defaultdict
@@ -313,4 +314,3 @@ async def partnershare(interaction: discord.Interaction):
 
 
 bot.run(TOKEN)
-
