@@ -23,6 +23,60 @@ YETKILI_ROLLER = [
     1474831132062122005
 ]
 
+# ✅ Plugin Paylaşım Modal
+class PluginModal(discord.ui.Modal, title="Plugin Paylaşım Formu"):
+    isim = discord.ui.TextInput(label="Plugin İsmi", max_length=100)
+    surum = discord.ui.TextInput(label="Sürüm", max_length=50)
+    aciklama = discord.ui.TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
+    link = discord.ui.TextInput(label="İndirme Linki", placeholder="https://")
+
+    async def on_submit(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="🔧 Plugin Paylaşımı", color=0x2ecc71)
+        embed.add_field(name="İsim", value=self.isim.value, inline=False)
+        embed.add_field(name="Sürüm", value=self.surum.value, inline=False)
+        embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
+        embed.add_field(name="Link", value=self.link.value, inline=False)
+        await interaction.response.send_message(embed=embed)
+
+# ✅ Pack Paylaşım Modal
+class PackModal(discord.ui.Modal, title="Pack Paylaşım Formu"):
+    isim = discord.ui.TextInput(label="Pack İsmi")
+    surum = discord.ui.TextInput(label="Sürüm")
+    link = discord.ui.TextInput(label="Link", placeholder="https://")
+
+    async def on_submit(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="📦 Pack Paylaşımı", color=0x3498db)
+        embed.add_field(name="İsim", value=self.isim.value, inline=False)
+        embed.add_field(name="Sürüm", value=self.surum.value, inline=False)
+        embed.add_field(name="Link", value=self.link.value, inline=False)
+        await interaction.response.send_message(embed=embed)
+
+# ✅ Sunucu Paylaşım Modal
+class SunucuModal(discord.ui.Modal, title="Sunucu Tanıtım Formu"):
+    isim = discord.ui.TextInput(label="Sunucu İsmi")
+    ip = discord.ui.TextInput(label="IP Adresi")
+    aciklama = discord.ui.TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="🌐 Sunucu Tanıtımı", color=0xf1c40f)
+        embed.add_field(name="İsim", value=self.isim.value, inline=False)
+        embed.add_field(name="IP", value=self.ip.value, inline=False)
+        embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
+        await interaction.response.send_message(embed=embed)
+
+# ✅ Discord Bot Paylaşım Modal
+class BotModal(discord.ui.Modal, title="Discord Bot Paylaşımı"):
+    isim = discord.ui.TextInput(label="Bot İsmi")
+    ozellik = discord.ui.TextInput(label="Özellikler", style=discord.TextStyle.paragraph)
+    link = discord.ui.TextInput(label="Davet / GitHub Linki", placeholder="https://")
+
+    async def on_submit(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="🤖 Discord Bot Tanıtımı", color=0x9b59b6)
+        embed.add_field(name="İsim", value=self.isim.value, inline=False)
+        embed.add_field(name="Özellikler", value=self.ozellik.value, inline=False)
+        embed.add_field(name="Link", value=self.link.value, inline=False)
+        await interaction.response.send_message(embed=embed)
+
 # ✅ Partner Başvuru Modal
 class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
     partner_isim = discord.ui.TextInput(label="Partner İsmi")
@@ -32,7 +86,6 @@ class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
     async def on_submit(self, interaction: discord.Interaction):
         # 'sunucu_uyelik' alanındaki değeri sayıya dönüştürmeden önce kontrol edelim
         try:
-            # Kullanıcının girdiği değeri sayıya dönüştürmeye çalışıyoruz
             sunucu_uyelik = int(self.sunucu_uyelik.value)  # Sayıya dönüştürme
         except ValueError:
             # Eğer kullanıcı geçerli bir sayı girmezse hata mesajı verelim
@@ -52,26 +105,7 @@ class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
 
         await interaction.response.send_message(embed=embed)
 
-# ✅ Partner Paylaşım Modal
-class PartnerPaylasModal(discord.ui.Modal, title="Partner Paylaşım Formu"):
-    partner_isim = discord.ui.TextInput(label="Partner İsmi")
-    aciklama = discord.ui.TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="🤝 Partner Paylaşımı", color=0x3498db)
-        embed.add_field(name="Partner İsmi", value=self.partner_isim.value, inline=False)
-        embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
-        await interaction.response.send_message(embed=embed)
-
-# ✅ İstek Modal
-class IstekModal(discord.ui.Modal, title="İstek Formu"):
-    istek = discord.ui.TextInput(label="İstek", style=discord.TextStyle.paragraph)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="📨 İstek", color=0xf1c40f)
-        embed.add_field(name="İstek", value=self.istek.value, inline=False)
-        await interaction.response.send_message(embed=embed)
-
+# Yetki Kontrolü
 def kullanici_yetkili():
     async def predicate(interaction: discord.Interaction):
         return any(role.id in YETKILI_ROLLER for role in interaction.user.roles)
@@ -83,20 +117,7 @@ async def on_ready():
     await bot.tree.sync()  # Komutları senkronize et
     print("Komutlar senkronize edildi.")
 
-# ✅ Slash Komutlar
-@bot.tree.command(name="partnerbasvurusu")
-async def partnerbasvurusu(interaction: discord.Interaction):
-    await interaction.response.send_modal(PartnerBasvuruModal())
-
-@bot.tree.command(name="partnerpaylas")
-@kullanici_yetkili()
-async def partnerpaylas(interaction: discord.Interaction):
-    await interaction.response.send_modal(PartnerPaylasModal())
-
-@bot.tree.command(name="istek")
-async def istek(interaction: discord.Interaction):
-    await interaction.response.send_modal(IstekModal())
-
+# Slash Komutlar
 @bot.tree.command(name="pluginpaylas")
 @kullanici_yetkili()
 async def pluginpaylas(interaction: discord.Interaction):
@@ -116,6 +137,10 @@ async def sunucupaylas(interaction: discord.Interaction):
 @kullanici_yetkili()
 async def botpaylas(interaction: discord.Interaction):
     await interaction.response.send_modal(BotModal())
+
+@bot.tree.command(name="partnerbasvurusu")
+async def partnerbasvurusu(interaction: discord.Interaction):
+    await interaction.response.send_modal(PartnerBasvuruModal())
 
 # Hata durumunda bilgiyi loglamak için
 @bot.event
