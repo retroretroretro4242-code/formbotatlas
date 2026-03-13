@@ -10,21 +10,20 @@ TOKEN = os.getenv("TOKEN")
 # =========================
 # SUNUCU & KANAL & ROL ID
 # =========================
-SUNUCU_ID = 1384288019426574367
-LOG_CHANNEL_ID = 1474827965643886864
-WELCOME_CHANNEL_ID = 1479868699463913789
-ONAY_KANAL_ID = 1475013100229890159
-ISTEK_KANAL_ID = 1475095722864017478
-PARTNER_KANAL_ID = 1476535145963192360
-PARTNER_BASVURU_KANAL_ID = 1476538995231162418
+SUNUCU_ID = 1482021160425357365
+LOG_CHANNEL_ID = 1482028188639952933
+WELCOME_CHANNEL_ID = 1482033833091010661
+ONAY_KANAL_ID = 1482033954445066341
+ISTEK_KANAL_ID = 1482034060678140015
+PARTNER_KANAL_ID = 1482021582665678979
+PARTNER_BASVURU_KANAL_ID = 1482021699020132486
+
+TICKET_KATEGORI_ID = 1482030116036149319
 
 YETKILI_ROLLER = [
-    1474831393644220599,
-    1384294618195169311,
-    1474830960393453619,
-    1474831019017371678,
-    1474831132062122005,
-    1474831344273068063
+    1482030116036149319,
+    1482030233056968827,
+    1482030334877896796,
 ]
 
 # =========================
@@ -36,223 +35,241 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # =========================
+# REKLAM KORUMA
+# =========================
+REKLAM_KORUMA = True
+
+# =========================
 # MODALS
 # =========================
 class PartnerBasvuruModal(discord.ui.Modal, title="Partner Başvuru Formu"):
     partner_isim = discord.ui.TextInput(label="Partner İsmi")
     aciklama = discord.ui.TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
-    sunucu_uyelik = discord.ui.TextInput(label="Sunucu Üyelik (Sayı)", placeholder="Örneğin: 1500")
+    sunucu_uyelik = discord.ui.TextInput(label="Sunucu Üyelik (Sayı)", placeholder="150")
     sunucu_link = discord.ui.TextInput(label="Sunucu Linki", placeholder="https://")
 
     async def on_submit(self, interaction: discord.Interaction):
+
         try:
             uyelik = int(self.sunucu_uyelik.value)
         except:
             await interaction.response.send_message("Üyelik sayısı geçerli sayı olmalı!", ephemeral=True)
             return
 
+        if uyelik < 150:
+            await interaction.response.send_message(
+                "❌ Partner için minimum **150 üye** gerekli.",
+                ephemeral=True
+            )
+            return
+
         embed = discord.Embed(title="🤝 Partner Başvurusu", color=0x2ecc71)
+
         embed.add_field(name="Partner İsmi", value=self.partner_isim.value, inline=False)
         embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
         embed.add_field(name="Sunucu Üyelik", value=str(uyelik), inline=False)
         embed.add_field(name="Sunucu Linki", value=self.sunucu_link.value, inline=False)
 
         channel = bot.get_channel(PARTNER_BASVURU_KANAL_ID)
+
         if channel:
+
             view = discord.ui.View()
+
             onay = Button(label="Onayla", style=discord.ButtonStyle.green, custom_id="onay")
             red = Button(label="Reddet", style=discord.ButtonStyle.red, custom_id="red")
+
             view.add_item(onay)
             view.add_item(red)
+
             await channel.send(embed=embed, view=view)
 
         await interaction.response.send_message("Başvurunuz alındı!", ephemeral=True)
 
 class PartnerPaylasModal(discord.ui.Modal, title="Partner Paylaşım Formu"):
+
     partner_isim = discord.ui.TextInput(label="Partner İsmi")
     aciklama = discord.ui.TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
+
     async def on_submit(self, interaction: discord.Interaction):
+
         embed = discord.Embed(title="🤝 Partner Paylaşımı", color=0x3498db)
+
         embed.add_field(name="Partner İsmi", value=self.partner_isim.value, inline=False)
         embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
-        await interaction.response.send_message(embed=embed)
 
-class IstekModal(discord.ui.Modal, title="İstek Formu"):
-    istek = discord.ui.TextInput(label="İstek", style=discord.TextStyle.paragraph)
-    async def on_submit(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="📨 İstek", color=0xf1c40f)
-        embed.add_field(name="İstek", value=self.istek.value, inline=False)
-        await interaction.response.send_message(embed=embed)
-
-class PluginModal(discord.ui.Modal, title="Plugin Paylaşım Formu"):
-    isim = discord.ui.TextInput(label="Plugin İsmi")
-    surum = discord.ui.TextInput(label="Sürüm")
-    aciklama = discord.ui.TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
-    link = discord.ui.TextInput(label="Link", placeholder="https://")
-    async def on_submit(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="🔧 Plugin Paylaşımı", color=0x2ecc71)
-        embed.add_field(name="İsim", value=self.isim.value, inline=False)
-        embed.add_field(name="Sürüm", value=self.surum.value, inline=False)
-        embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
-        embed.add_field(name="Link", value=self.link.value, inline=False)
-        await interaction.response.send_message(embed=embed)
-
-class PackModal(discord.ui.Modal, title="Pack Paylaşım Formu"):
-    isim = discord.ui.TextInput(label="Pack İsmi")
-    surum = discord.ui.TextInput(label="Sürüm")
-    link = discord.ui.TextInput(label="Link", placeholder="https://")
-    async def on_submit(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="📦 Pack Paylaşımı", color=0x3498db)
-        embed.add_field(name="İsim", value=self.isim.value, inline=False)
-        embed.add_field(name="Sürüm", value=self.surum.value, inline=False)
-        embed.add_field(name="Link", value=self.link.value, inline=False)
-        await interaction.response.send_message(embed=embed)
-
-class SunucuModal(discord.ui.Modal, title="Sunucu Tanıtım Formu"):
-    isim = discord.ui.TextInput(label="Sunucu İsmi")
-    ip = discord.ui.TextInput(label="IP Adresi")
-    aciklama = discord.ui.TextInput(label="Açıklama", style=discord.TextStyle.paragraph)
-    async def on_submit(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="🌐 Sunucu Tanıtımı", color=0xf1c40f)
-        embed.add_field(name="İsim", value=self.isim.value, inline=False)
-        embed.add_field(name="IP", value=self.ip.value, inline=False)
-        embed.add_field(name="Açıklama", value=self.aciklama.value, inline=False)
-        await interaction.response.send_message(embed=embed)
-
-class BotModal(discord.ui.Modal, title="Discord Bot Paylaşımı"):
-    isim = discord.ui.TextInput(label="Bot İsmi")
-    ozellik = discord.ui.TextInput(label="Özellikler", style=discord.TextStyle.paragraph)
-    link = discord.ui.TextInput(label="Davet / GitHub Linki", placeholder="https://")
-    async def on_submit(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="🤖 Discord Bot Tanıtımı", color=0x9b59b6)
-        embed.add_field(name="İsim", value=self.isim.value, inline=False)
-        embed.add_field(name="Özellikler", value=self.ozellik.value, inline=False)
-        embed.add_field(name="Link", value=self.link.value, inline=False)
         await interaction.response.send_message(embed=embed)
 
 # =========================
-# Yetkili & Kanal Kontrolleri
-# =========================
-def kullanici_yetkili():
-    async def predicate(interaction: discord.Interaction):
-        return any(role.id in YETKILI_ROLLER for role in interaction.user.roles)
-    return app_commands.check(predicate)
-
-def kanal_check(kanal_id):
-    async def predicate(interaction: discord.Interaction):
-        return interaction.channel.id == kanal_id
-    return app_commands.check(predicate)
-
-# =========================
-# HOŞGELDİN MESAJI
-# =========================
-@bot.event
-async def on_member_join(member: discord.Member):
-    embed = discord.Embed(
-        title=f"👋 Hoş geldin, {member.name}!",
-        description="**PRX | Prime Raiders** ailesine katıldığın için mutluyuz!",
-        color=discord.Color.blurple()
-    )
-    embed.set_thumbnail(url=member.display_avatar.url)
-    embed.add_field(
-        name="🌐 Takım Olanaklarımız",
-        value="• Profesyonel e-spor deneyimi\n• Düzenli turnuvalar\n• Özel Discord topluluğu",
-        inline=False
-    )
-    embed.set_footer(text=f"{member.guild.name} • PRX | Prime Raiders")
-    channel = bot.get_channel(WELCOME_CHANNEL_ID)
-    if channel:
-        await channel.send(content=f"🎉 {member.mention} aramıza katıldı!", embed=embed)
-    try:
-        await member.send(content=f"👋 {member.name}, {member.guild.name} sunucusuna hoş geldin!", embed=embed)
-    except:
-        pass
-
-# =========================
-# Partner Başvuru Onay / Red
-# =========================
-@bot.event
-async def on_interaction(interaction: discord.Interaction):
-    if interaction.type != discord.InteractionType.component:
-        return
-    cid = interaction.data["custom_id"]
-    if cid == "onay":
-        embed = discord.Embed(title="✅ Partner Başvurusu Onaylandı", color=0x2ecc71)
-        fields = interaction.message.embeds[0].fields
-        embed.add_field(name="Partner İsmi", value=fields[0].value, inline=False)
-        embed.add_field(name="Açıklama", value=fields[1].value, inline=False)
-        embed.add_field(name="Sunucu Üyelik", value=fields[2].value, inline=False)
-        embed.add_field(name="Sunucu Linki", value=fields[3].value, inline=False)
-        channel = bot.get_channel(ONAY_KANAL_ID)
-        if channel:
-            await channel.send(embed=embed)
-        await interaction.response.send_message("Başvuru onaylandı!", ephemeral=True)
-    elif cid == "red":
-        await interaction.response.send_message("Başvuru reddedildi.", ephemeral=True)
-
-# =========================
-# SLASH KOMUTLAR
-# =========================
-@bot.tree.command(name="partnerbasvurusu")
-async def partnerbasvurusu(interaction: discord.Interaction):
-    await interaction.response.send_modal(PartnerBasvuruModal())
-
-@bot.tree.command(name="partnerpaylas")
-@kullanici_yetkili()
-@kanal_check(PARTNER_KANAL_ID)
-async def partnerpaylas(interaction: discord.Interaction):
-    await interaction.response.send_modal(PartnerPaylasModal())
-
-@bot.tree.command(name="istek")
-@kanal_check(ISTEK_KANAL_ID)
-async def istek(interaction: discord.Interaction):
-    await interaction.response.send_modal(IstekModal())
-
-@bot.tree.command(name="pluginpaylas")
-@kullanici_yetkili()
-async def pluginpaylas(interaction: discord.Interaction):
-    await interaction.response.send_modal(PluginModal())
-
-@bot.tree.command(name="packpaylas")
-@kullanici_yetkili()
-async def packpaylas(interaction: discord.Interaction):
-    await interaction.response.send_modal(PackModal())
-
-@bot.tree.command(name="sunucupaylas")
-@kullanici_yetkili()
-async def sunucupaylas(interaction: discord.Interaction):
-    await interaction.response.send_modal(SunucuModal())
-
-@bot.tree.command(name="botpaylas")
-@kullanici_yetkili()
-async def botpaylas(interaction: discord.Interaction):
-    await interaction.response.send_modal(BotModal())
-
-# =========================
-# Ticket Panel
+# TICKET PANEL
 # =========================
 class TicketView(View):
+
     def __init__(self):
         super().__init__(timeout=None)
+
         self.add_item(Button(label="Ekip Alım", style=discord.ButtonStyle.green, custom_id="ekip_alim"))
         self.add_item(Button(label="Yetkili Alım", style=discord.ButtonStyle.blurple, custom_id="yetkili_alim"))
         self.add_item(Button(label="Diğer", style=discord.ButtonStyle.gray, custom_id="diger"))
 
 @bot.tree.command(name="ticketpanel")
 async def ticketpanel(interaction: discord.Interaction):
-    embed = discord.Embed(title="🎫 Ticket Paneli", description="Aşağıdaki butonlardan başvuru türünü seçebilirsiniz.", color=discord.Color.orange())
+
+    embed = discord.Embed(
+        title="🎫 Ticket Paneli",
+        description="Aşağıdaki butonlardan başvuru türünü seçebilirsiniz.",
+        color=discord.Color.orange()
+    )
+
     await interaction.response.send_message(embed=embed, view=TicketView())
 
 # =========================
-# READY EVENT
+# WELCOME SİSTEMİ
+# =========================
+@bot.event
+async def on_member_join(member):
+
+    channel = bot.get_channel(WELCOME_CHANNEL_ID)
+
+    embed = discord.Embed(
+        title=f"👋 Hoş geldin {member.name}!",
+        color=0x2ecc71
+    )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+
+    embed.add_field(
+        name="Bilgi",
+        value=f"{member.mention} Sunucuda **{member.guild.member_count}. üyemizsin.**",
+        inline=False
+    )
+
+    if channel:
+        await channel.send(embed=embed)
+
+# =========================
+# LEAVE LOG
+# =========================
+@bot.event
+async def on_member_remove(member):
+
+    channel = bot.get_channel(LOG_CHANNEL_ID)
+
+    embed = discord.Embed(
+        title="🚪 Sunucudan Ayrıldı",
+        description=f"{member} sunucudan ayrıldı.",
+        color=0xe74c3c
+    )
+
+    if channel:
+        await channel.send(embed=embed)
+
+# =========================
+# REKLAM KORUMA
+# =========================
+@bot.event
+async def on_message(message):
+
+    if message.author.bot:
+        return
+
+    if REKLAM_KORUMA:
+
+        reklam = ["discord.gg", "discord.com/invite", "http://", "https://"]
+
+        if any(x in message.content.lower() for x in reklam):
+
+            if not any(role.id in YETKILI_ROLLER for role in message.author.roles):
+
+                try:
+                    await message.delete()
+
+                    embed = discord.Embed(
+                        title="🚫 Reklam Engellendi",
+                        description=f"{message.author.mention} reklam göndermeye çalıştı.",
+                        color=0xe74c3c
+                    )
+
+                    log = bot.get_channel(LOG_CHANNEL_ID)
+
+                    if log:
+                        await log.send(embed=embed)
+
+                except:
+                    pass
+
+    await bot.process_commands(message)
+
+# =========================
+# BUTTON HANDLER
+# =========================
+@bot.event
+async def on_interaction(interaction: discord.Interaction):
+
+    if interaction.type != discord.InteractionType.component:
+        return
+
+    cid = interaction.data["custom_id"]
+
+    if cid in ["ekip_alim", "yetkili_alim", "diger"]:
+
+        kategori = bot.get_channel(TICKET_KATEGORI_ID)
+
+        kanal = await interaction.guild.create_text_channel(
+            name=f"ticket-{interaction.user.name}",
+            category=kategori
+        )
+
+        embed = discord.Embed(
+            title="🎫 Ticket Oluşturuldu",
+            description=f"{interaction.user.mention} yetkililer yakında sizinle ilgilenecek.",
+            color=0xf1c40f
+        )
+
+        await kanal.send(interaction.user.mention, embed=embed)
+
+        await interaction.response.send_message(
+            f"Ticket oluşturuldu: {kanal.mention}",
+            ephemeral=True
+        )
+
+    if cid == "onay":
+
+        fields = interaction.message.embeds[0].fields
+
+        embed = discord.Embed(
+            title="🤝 Yeni Partner",
+            color=0x2ecc71
+        )
+
+        embed.add_field(name="Partner İsmi", value=fields[0].value, inline=False)
+        embed.add_field(name="Açıklama", value=fields[1].value, inline=False)
+        embed.add_field(name="Sunucu Üyelik", value=fields[2].value, inline=False)
+        embed.add_field(name="Sunucu Linki", value=fields[3].value, inline=False)
+
+        kanal = bot.get_channel(PARTNER_KANAL_ID)
+
+        if kanal:
+            await kanal.send(embed=embed)
+
+        await interaction.response.send_message("Başvuru onaylandı!", ephemeral=True)
+
+    if cid == "red":
+        await interaction.response.send_message("Başvuru reddedildi.", ephemeral=True)
+
+# =========================
+# READY
 # =========================
 @bot.event
 async def on_ready():
+
     print(f"Bot hazır: {bot.user}")
+
     await bot.tree.sync()
+
     print("Komutlar senkronize edildi.")
 
 # =========================
-# RUN BOT
+# RUN
 # =========================
 bot.run(TOKEN)
