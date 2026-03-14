@@ -376,10 +376,6 @@ async def verify(interaction):
         ephemeral=True
     )
 
-# =========================
-# READY
-# =========================
-
 @bot.event
 async def on_ready():
 
@@ -389,7 +385,12 @@ async def on_ready():
     bot.add_view(TicketKategori())
     bot.add_view(TicketKapat())
 
-    await bot.tree.sync()
+    for guild in bot.guilds:
+        try:
+            await bot.tree.sync(guild=guild)
+            print(f"Komutlar senkronize edildi: {guild.name}")
+        except Exception as e:
+            print(e)
 
     channel = bot.get_channel(VOICE_CHANNEL_ID)
 
@@ -398,7 +399,6 @@ async def on_ready():
 
         if not vc:
             await channel.connect()
-
 # =========================
 # MODERASYON KOMUTLARI
 # =========================
