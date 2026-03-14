@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 from discord.ui import Button, View
 import os
+from datetime import timedelta
 
 TOKEN = os.getenv("TOKEN")
 
@@ -19,6 +20,7 @@ VERIFY_ROLE_ID = 1482021882378059876
 AUTO_ROLE_ID = 1482031140897292563
 
 TICKET_KATEGORI_ID = 1482030116036149319
+TICKET_LOG_CHANNEL = 1482028188639952933
 
 # =========================
 # YETKİLİ ROLLER
@@ -30,14 +32,13 @@ YETKILI_ROLLER = [
 1482030334877896796
 ]
 
+ticket_counter = 0
+
 # =========================
 # BOT
 # =========================
 
-intents = discord.Intents.default()
-intents.members = True
-intents.message_content = True
-
+intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # =========================
@@ -52,16 +53,14 @@ async def on_member_join(member):
     if role:
         await member.add_roles(role)
 
-    channel = bot.get_channel(WELCOME_CHANNEL_ID)
-
     embed = discord.Embed(
         title=f"👋 Hoş geldin, {member.name}!",
-        description="LBDev | Software @2026 ailesine katıldığın için mutluyuz.",
-        color=0x8e44ad
+        description="Nova Project ailesine katıldığın için mutluyuz.",
+        color=0x5865F2
     )
 
     embed.add_field(
-        name="",
+        name="Nova Project",
         value=(
             "🎮 FiveM & Minecraft yazılım çözümleri\n"
             "🌐 Web sitesi tasarım ve geliştirme\n"
@@ -72,6 +71,8 @@ async def on_member_join(member):
     )
 
     embed.set_thumbnail(url=member.display_avatar.url)
+
+    channel = bot.get_channel(WELCOME_CHANNEL_ID)
 
     if channel:
         await channel.send(embed=embed)
@@ -108,15 +109,15 @@ async def on_raw_reaction_add(payload):
 
         embed = discord.Embed(
             title="✅ Doğrulama Başarılı",
-            description="LBDev | Software @2026 sunucusunda başarıyla doğrulandın!",
+            description="Nova Project sunucusunda başarıyla doğrulandın!",
             color=0x2ecc71
         )
 
         embed.add_field(
             name="",
             value=(
-                "💚 Artık tüm kanallara erişim sağlayabilirsin\n"
-                "📩 Yardıma ihtiyacın olursa destek talebi oluşturabilirsin\n"
+                "💚 Artık tüm kanallara erişebilirsin\n"
+                "📩 Yardım için ticket açabilirsin\n"
                 "🎉 Topluluğumuza hoş geldin!"
             ),
             inline=False
@@ -147,10 +148,21 @@ async def on_message(message):
 
             await message.delete()
 
+            log = bot.get_channel(LOG_CHANNEL_ID)
+
+            embed = discord.Embed(
+                title="🚫 Reklam Engellendi",
+                description=f"{message.author.mention} reklam göndermeye çalıştı.",
+                color=0xe74c3c
+            )
+
+            if log:
+                await log.send(embed=embed)
+
     await bot.process_commands(message)
 
 # =========================
-# TICKET
+# TICKET SİSTEMİ
 # =========================
 
 class TicketView(View):
@@ -158,34 +170,42 @@ class TicketView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
-        self.add_item(Button(label="Ekip Alım",style=discord.ButtonStyle.green,custom_id="ticket_ekip"))
-        self.add_item(Button(label="Yetkili Alım",style=discord.ButtonStyle.blurple,custom_id="ticket_yetkili"))
-        self.add_item(Button(label="Diğer",style=discord.ButtonStyle.gray,custom_id="ticket_diger"))
+        self.add_item(Button(label="🎮 Ekip Alım",style=discord.ButtonStyle.green,custom_id="ticket_ekip"))
+        self.add_item(Button(label="🛡️ Yetkili Alım",style=discord.ButtonStyle.blurple,custom_id="ticket_yetkili"))
+        self.add_item(Button(label="❓ Diğer Destek",style=discord.ButtonStyle.gray,custom_id="ticket_diger"))
 
 class CloseTicket(View):
 
     def __init__(self):
         super().__init__(timeout=None)
 
-        self.add_item(Button(label="Ticket Kapat",style=discord.ButtonStyle.red,custom_id="ticket_kapat"))
+        self.add_item(Button(label="🔒 Ticket Kapat",style=discord.ButtonStyle.red,custom_id="ticket_kapat"))
 
 @bot.tree.command(name="ticketpanel")
 async def ticketpanel(interaction: discord.Interaction):
 
     embed = discord.Embed(
-        title="🎫 Ticket Paneli",
-        description="Butona basarak ticket oluşturabilirsiniz.",
-        color=0xf1c40f
+        title="🎫 Nova Project Destek Paneli",
+        description="Butonlardan birine basarak destek talebi oluşturabilirsiniz.",
+        color=0x5865F2
     )
 
-    await interaction.response.send_message(embed=embed,view=TicketView())
+    embed.add_field(
+        name="Açabileceğin Ticketlar",
+        value=(
+            "🎮 Ekip Alım\n"
+            "🛡️ Yetkili Alım\n"
+            "❓ Genel Destek"
+        ),
+        inline=False
+    )
 
-# =========================
-# BUTTON EVENT
-# =========================
+    await interaction.response.send_message(embed=embed, view=TicketView())
 
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
+
+    global ticket_counter
 
     if interaction.type != discord.InteractionType.component:
         return
@@ -194,27 +214,82 @@ async def on_interaction(interaction: discord.Interaction):
 
     if cid.startswith("ticket_") and cid != "ticket_kapat":
 
+        ticket_counter += 1
+        ticket_id = f"{ticket_counter:03}"
+
         kategori = bot.get_channel(TICKET_KATEGORI_ID)
 
         kanal = await interaction.guild.create_text_channel(
-            name=f"ticket-{interaction.user.name}",
+            name=f"ticket-{ticket_id}",
             category=kategori
         )
 
         embed = discord.Embed(
-            title="🎫 Ticket Oluşturuldu",
-            description=f"{interaction.user.mention} destek yakında gelecek.",
-            color=0xf1c40f
+            title=f"🎫 Ticket #{ticket_id}",
+            description=f"{interaction.user.mention} destek talebi oluşturdu.",
+            color=0x2ecc71
         )
 
-        await kanal.send(interaction.user.mention,embed=embed,view=CloseTicket())
+        embed.add_field(
+            name="Ticket Bilgisi",
+            value=(
+                "Bir yetkili yakında sizinle ilgilenecektir.\n\n"
+                "Lütfen sorununuzu detaylı anlatın."
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="Ticket Kuralları",
+            value=(
+                "• Spam yapmayın\n"
+                "• Yetkililere saygılı olun\n"
+                "• İş bitince ticket kapatılır"
+            ),
+            inline=False
+        )
+
+        await kanal.send(
+            content=interaction.user.mention,
+            embed=embed,
+            view=CloseTicket()
+        )
 
         await interaction.response.send_message(
             f"Ticket oluşturuldu: {kanal.mention}",
             ephemeral=True
         )
 
+        log = bot.get_channel(TICKET_LOG_CHANNEL)
+
+        if log:
+
+            log_embed = discord.Embed(
+                title="🎫 Ticket Açıldı",
+                description=f"{interaction.user.mention} tarafından açıldı.",
+                color=0x3498db
+            )
+
+            log_embed.add_field(name="Ticket",value=f"#{ticket_id}")
+            log_embed.add_field(name="Kanal",value=kanal.mention)
+
+            await log.send(embed=log_embed)
+
     if cid == "ticket_kapat":
+
+        log = bot.get_channel(TICKET_LOG_CHANNEL)
+
+        if log:
+
+            embed = discord.Embed(
+                title="🔒 Ticket Kapatıldı",
+                description=f"{interaction.user.mention} ticket kapattı.",
+                color=0xe74c3c
+            )
+
+            embed.add_field(name="Kanal",value=interaction.channel.name)
+
+            await log.send(embed=embed)
 
         await interaction.channel.delete()
 
@@ -246,16 +321,15 @@ async def userinfo(interaction: discord.Interaction, member: discord.Member):
 def yetkili():
 
     async def predicate(interaction: discord.Interaction):
-
         return any(role.id in YETKILI_ROLLER for role in interaction.user.roles)
 
     return app_commands.check(predicate)
 
 @bot.tree.command(name="ban")
 @yetkili()
-async def ban(interaction: discord.Interaction, member: discord.Member, sebep: str = "Sebep belirtilmedi"):
+async def ban(interaction: discord.Interaction, member: discord.Member):
 
-    await member.ban(reason=sebep)
+    await member.ban()
 
     await interaction.response.send_message(f"{member} banlandı.")
 
@@ -270,8 +344,6 @@ async def kick(interaction: discord.Interaction, member: discord.Member):
 @bot.tree.command(name="timeout")
 @yetkili()
 async def timeout(interaction: discord.Interaction, member: discord.Member, dakika: int):
-
-    from datetime import timedelta
 
     await member.timeout(timedelta(minutes=dakika))
 
