@@ -162,50 +162,66 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # =========================
-# TICKET SİSTEMİ
+# TICKET PANEL
 # =========================
 
-class TicketView(View):
+class TicketKategori(View):
 
     def __init__(self):
         super().__init__(timeout=None)
 
-        self.add_item(Button(label="🎮 Ekip Alım",style=discord.ButtonStyle.green,custom_id="ticket_ekip"))
-        self.add_item(Button(label="🛡️ Yetkili Alım",style=discord.ButtonStyle.blurple,custom_id="ticket_yetkili"))
-        self.add_item(Button(label="❓ Diğer Destek",style=discord.ButtonStyle.gray,custom_id="ticket_diger"))
+        self.add_item(Button(label="💰 Sipariş",style=discord.ButtonStyle.green,custom_id="ticket_siparis"))
+        self.add_item(Button(label="🛠 Destek",style=discord.ButtonStyle.blurple,custom_id="ticket_destek"))
+        self.add_item(Button(label="📦 Proje İsteği",style=discord.ButtonStyle.gray,custom_id="ticket_proje"))
+        self.add_item(Button(label="🎁 Ücretsiz Proje",style=discord.ButtonStyle.success,custom_id="ticket_ucretsiz"))
+        self.add_item(Button(label="❓ Diğer",style=discord.ButtonStyle.red,custom_id="ticket_diger"))
 
-class CloseTicket(View):
+class TicketKapat(View):
 
     def __init__(self):
         super().__init__(timeout=None)
 
         self.add_item(Button(label="🔒 Ticket Kapat",style=discord.ButtonStyle.red,custom_id="ticket_kapat"))
 
+ticket_sayac = 0
+
+# =========================
+# PANEL KOMUTU
+# =========================
+
 @bot.tree.command(name="ticketpanel")
 async def ticketpanel(interaction: discord.Interaction):
 
     embed = discord.Embed(
         title="🎫 Nova Project Destek Paneli",
-        description="Butonlardan birine basarak destek talebi oluşturabilirsiniz.",
+        description="Aşağıdaki kategorilerden birini seçerek ticket oluşturabilirsiniz.",
         color=0x5865F2
     )
 
     embed.add_field(
-        name="Açabileceğin Ticketlar",
+        name="📌 Kategoriler",
         value=(
-            "🎮 Ekip Alım\n"
-            "🛡️ Yetkili Alım\n"
-            "❓ Genel Destek"
+            "💰 **Sipariş** → Yazılım veya hizmet satın alma\n"
+            "🛠 **Destek** → Teknik yardım\n"
+            "📦 **Proje İsteği** → Yeni proje talebi\n"
+            "🎁 **Ücretsiz Proje** → Ücretsiz proje başvurusu\n"
+            "❓ **Diğer** → Diğer sorular"
         ),
         inline=False
     )
 
-    await interaction.response.send_message(embed=embed, view=TicketView())
+    embed.set_footer(text="Nova Project Ticket Sistemi")
+
+    await interaction.response.send_message(embed=embed, view=TicketKategori())
+
+# =========================
+# BUTTON EVENT
+# =========================
 
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
 
-    global ticket_counter
+    global ticket_sayac
 
     if interaction.type != discord.InteractionType.component:
         return
@@ -214,8 +230,8 @@ async def on_interaction(interaction: discord.Interaction):
 
     if cid.startswith("ticket_") and cid != "ticket_kapat":
 
-        ticket_counter += 1
-        ticket_id = f"{ticket_counter:03}"
+        ticket_sayac += 1
+        ticket_id = f"{ticket_sayac:03}"
 
         kategori = bot.get_channel(TICKET_KATEGORI_ID)
 
@@ -224,27 +240,32 @@ async def on_interaction(interaction: discord.Interaction):
             category=kategori
         )
 
+        tur = cid.replace("ticket_","").capitalize()
+
         embed = discord.Embed(
             title=f"🎫 Ticket #{ticket_id}",
-            description=f"{interaction.user.mention} destek talebi oluşturdu.",
+            description=f"{interaction.user.mention} **{tur}** kategorisinde ticket açtı.",
             color=0x2ecc71
         )
 
         embed.add_field(
-            name="Ticket Bilgisi",
+            name="📋 Bilgi",
             value=(
-                "Bir yetkili yakında sizinle ilgilenecektir.\n\n"
-                "Lütfen sorununuzu detaylı anlatın."
+                "Yetkililer kısa süre içinde sizinle ilgilenecektir.\n\n"
+                "Lütfen aşağıdaki bilgileri yazın:\n"
+                "• Ne istiyorsunuz?\n"
+                "• Proje detayları\n"
+                "• Varsa görseller"
             ),
             inline=False
         )
 
         embed.add_field(
-            name="Ticket Kuralları",
+            name="⚠️ Kurallar",
             value=(
                 "• Spam yapmayın\n"
                 "• Yetkililere saygılı olun\n"
-                "• İş bitince ticket kapatılır"
+                "• Ticket çözülünce kapatılır"
             ),
             inline=False
         )
@@ -252,7 +273,7 @@ async def on_interaction(interaction: discord.Interaction):
         await kanal.send(
             content=interaction.user.mention,
             embed=embed,
-            view=CloseTicket()
+            view=TicketKapat()
         )
 
         await interaction.response.send_message(
@@ -260,39 +281,12 @@ async def on_interaction(interaction: discord.Interaction):
             ephemeral=True
         )
 
-        log = bot.get_channel(TICKET_LOG_CHANNEL)
-
-        if log:
-
-            log_embed = discord.Embed(
-                title="🎫 Ticket Açıldı",
-                description=f"{interaction.user.mention} tarafından açıldı.",
-                color=0x3498db
-            )
-
-            log_embed.add_field(name="Ticket",value=f"#{ticket_id}")
-            log_embed.add_field(name="Kanal",value=kanal.mention)
-
-            await log.send(embed=log_embed)
-
     if cid == "ticket_kapat":
 
-        log = bot.get_channel(TICKET_LOG_CHANNEL)
-
-        if log:
-
-            embed = discord.Embed(
-                title="🔒 Ticket Kapatıldı",
-                description=f"{interaction.user.mention} ticket kapattı.",
-                color=0xe74c3c
-            )
-
-            embed.add_field(name="Kanal",value=interaction.channel.name)
-
-            await log.send(embed=embed)
+        await interaction.channel.send("🔒 Ticket kapatılıyor...")
 
         await interaction.channel.delete()
-
+        
 # =========================
 # KULLANICI BİLGİ
 # =========================
