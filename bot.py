@@ -394,10 +394,177 @@ async def on_ready():
     channel = bot.get_channel(VOICE_CHANNEL_ID)
 
     if channel:
+        vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
 
-        if not channel.guild.voice_client:
+        if not vc:
             await channel.connect()
 
 # =========================
+# MODERASYON KOMUTLARI
+# =========================
+
+@bot.tree.command(name="sil", description="Mesaj sil")
+async def sil(interaction: discord.Interaction, miktar: int):
+
+    if not is_yetkili(interaction.user):
+        await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    await interaction.channel.purge(limit=miktar)
+
+    await interaction.followup.send(f"🗑 {miktar} mesaj silindi.")
+
+
+@bot.tree.command(name="ban")
+async def ban(interaction: discord.Interaction, user: discord.Member, reason: str = "Sebep belirtilmedi"):
+
+    if not is_yetkili(interaction.user):
+        await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
+        return
+
+    await user.ban(reason=reason)
+
+    await interaction.response.send_message(
+        f"🔨 {user.mention} banlandı.\nSebep: {reason}"
+    )
+
+
+@bot.tree.command(name="kick")
+async def kick(interaction: discord.Interaction, user: discord.Member, reason: str = "Sebep belirtilmedi"):
+
+    if not is_yetkili(interaction.user):
+        await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
+        return
+
+    await user.kick(reason=reason)
+
+    await interaction.response.send_message(
+        f"👢 {user.mention} atıldı.\nSebep: {reason}"
+    )
+
+
+@bot.tree.command(name="mute")
+async def mute(interaction: discord.Interaction, user: discord.Member, dakika: int):
+
+    if not is_yetkili(interaction.user):
+        await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
+        return
+
+    duration = timedelta(minutes=dakika)
+
+    await user.timeout(duration)
+
+    await interaction.response.send_message(
+        f"🔇 {user.mention} {dakika} dakika susturuldu."
+    )
+
+
+@bot.tree.command(name="unmute")
+async def unmute(interaction: discord.Interaction, user: discord.Member):
+
+    if not is_yetkili(interaction.user):
+        await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
+        return
+
+    await user.timeout(None)
+
+    await interaction.response.send_message(
+        f"🔊 {user.mention} susturma kaldırıldı."
+    )
+
+
+@bot.tree.command(name="warn")
+async def warn(interaction: discord.Interaction, user: discord.Member, reason: str = "Sebep belirtilmedi"):
+
+    if not is_yetkili(interaction.user):
+        await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
+        return
+
+    warnings.setdefault(user.id, 0)
+    warnings[user.id] += 1
+
+    await interaction.response.send_message(
+        f"⚠️ {user.mention} uyarıldı.\nSebep: {reason}\nToplam Warn: {warnings[user.id]}"
+    )
+
+
+@bot.tree.command(name="clear")
+async def clear(interaction: discord.Interaction, miktar: int):
+
+    if not is_yetkili(interaction.user):
+        await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    await interaction.channel.purge(limit=miktar)
+
+    await interaction.followup.send(f"🧹 {miktar} mesaj temizlendi.")
+
+
+@bot.tree.command(name="kilit")
+async def kilit(interaction: discord.Interaction):
+
+    if not is_yetkili(interaction.user):
+        await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
+        return
+
+    overwrite = interaction.channel.overwrites_for(interaction.guild.default_role)
+    overwrite.send_messages = False
+
+    await interaction.channel.set_permissions(
+        interaction.guild.default_role,
+        overwrite=overwrite
+    )
+
+    await interaction.response.send_message("🔒 Kanal kilitlendi.")
+
+
+@bot.tree.command(name="aç")
+async def ac(interaction: discord.Interaction):
+
+    if not is_yetkili(interaction.user):
+        await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
+        return
+
+    overwrite = interaction.channel.overwrites_for(interaction.guild.default_role)
+    overwrite.send_messages = True
+
+    await interaction.channel.set_permissions(
+        interaction.guild.default_role,
+        overwrite=overwrite
+    )
+
+    await interaction.response.send_message("🔓 Kanal açıldı.")
+
+
+@bot.tree.command(name="rolver")
+async def rolver(interaction: discord.Interaction, user: discord.Member, role: discord.Role):
+
+    if not is_yetkili(interaction.user):
+        await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
+        return
+
+    await user.add_roles(role)
+
+    await interaction.response.send_message(
+        f"✅ {user.mention} kullanıcısına {role.name} rolü verildi."
+    )
+
+
+@bot.tree.command(name="rolal")
+async def rolal(interaction: discord.Interaction, user: discord.Member, role: discord.Role):
+
+    if not is_yetkili(interaction.user):
+        await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
+        return
+
+    await user.remove_roles(role)
+
+    await interaction.response.send_message(
+        f"❌ {user.mention} kullanıcısından {role.name} rolü alındı."
+    )
 
 bot.run(TOKEN)
