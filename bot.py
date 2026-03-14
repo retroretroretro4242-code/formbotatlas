@@ -1,10 +1,9 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 from discord.ui import Button, View
 import os
-from datetime import timedelta
 import time
+from datetime import timedelta
 
 TOKEN = os.getenv("TOKEN")
 
@@ -35,15 +34,13 @@ YETKILI_ROLLER = [
 ]
 
 # =========================
-# BOT
-# =========================
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-ticket_counter = 0
 warnings = {}
 join_tracker = []
+ticket_counter = 0
 
 # =========================
 # YETKİLİ KONTROL
@@ -108,7 +105,7 @@ class VerifyButton(View):
         ))
 
 # =========================
-# GELİŞMİŞ TICKET SİSTEMİ
+# TICKET SİSTEMİ
 # =========================
 
 class TicketKategori(View):
@@ -140,15 +137,44 @@ class TicketKapat(View):
         ))
 
 # =========================
-# HOŞGELDİN + ANTIRAID
+# HOŞGELDİN
 # =========================
 
 @bot.event
 async def on_member_join(member):
 
     role = member.guild.get_role(AUTO_ROLE_ID)
+
     if role:
         await member.add_roles(role)
+
+    try:
+
+        embed = discord.Embed(
+            title=f"👋 Hoş geldin, {member.name}!",
+            description="**Project Nova** ailesine katıldığın için mutluyuz.",
+            color=0x5865F2
+        )
+
+        embed.add_field(
+            name="🚀 Hizmetlerimiz",
+            value=(
+                "🎮 FiveM & Minecraft yazılım çözümleri\n"
+                "🌐 Web sitesi tasarım ve geliştirme\n"
+                "🤖 Özel Discord bot geliştirme\n"
+                "🏆 8+ yıl tecrübe · 150+ sunucu · 2000+ sipariş"
+            ),
+            inline=False
+        )
+
+        embed.set_thumbnail(url=member.display_avatar.url)
+
+        await member.send(embed=embed)
+
+    except:
+        pass
+
+    # ANTIRAID
 
     join_tracker.append(time.time())
     join_tracker[:] = [t for t in join_tracker if time.time()-t < 10]
@@ -174,29 +200,23 @@ async def on_message(message):
         await bot.process_commands(message)
         return
 
-    content = message.content
-    lower = content.lower()
+    content = message.content.lower()
 
-    # REKLAM
-    if any(x in lower for x in ["discord.gg","http://","https://",".gg/"]):
-
+    if any(x in content for x in ["discord.gg","http://","https://",".gg/"]):
         await message.delete()
         await ceza_ver(message.author,"Reklam")
         return
 
-    # KÜFÜR
-    if any(x in lower for x in ["amk","aq","orospu","salak"]):
-
+    if any(x in content for x in ["amk","aq","orospu","salak"]):
         await message.delete()
         await ceza_ver(message.author,"Küfür")
         return
 
-    # CAPS LOCK
-    if len(content) > 8:
+    if len(message.content) > 8:
 
-        upper = sum(1 for c in content if c.isupper())
+        upper = sum(1 for c in message.content if c.isupper())
 
-        if upper / len(content) > 0.7:
+        if upper / len(message.content) > 0.7:
 
             await message.delete()
             await ceza_ver(message.author,"Caps spam")
@@ -230,6 +250,33 @@ async def on_interaction(interaction):
             "✅ Doğrulandın!",
             ephemeral=True
         )
+
+        try:
+
+            embed = discord.Embed(
+                title=f"👋 Hoş geldin, {interaction.user.name}!",
+                description="**Project Nova** ailesine katıldığın için mutluyuz.",
+                color=0x5865F2
+            )
+
+            embed.add_field(
+                name="🚀 Hizmetlerimiz",
+                value=(
+                    "🎮 FiveM & Minecraft yazılım çözümleri\n"
+                    "🌐 Web sitesi tasarım ve geliştirme\n"
+                    "🤖 Özel Discord bot geliştirme\n"
+                    "🏆 8+ yıl tecrübe · 150+ sunucu · 2000+ sipariş"
+                ),
+                inline=False
+            )
+
+            embed.set_thumbnail(url=interaction.user.display_avatar.url)
+
+            await interaction.user.send(embed=embed)
+
+        except:
+            pass
+
         return
 
     # TICKET AÇ
@@ -274,6 +321,14 @@ async def on_interaction(interaction):
 
     if cid == "ticket_kapat":
 
+        if not is_yetkili(interaction.user):
+
+            await interaction.response.send_message(
+                "❌ Ticket sadece yetkililer kapatabilir.",
+                ephemeral=True
+            )
+            return
+
         await interaction.response.send_message("🔒 Ticket kapatılıyor...")
 
         await interaction.channel.delete()
@@ -288,12 +343,15 @@ async def ticketpanel(interaction):
     embed = discord.Embed(
         title="🎫 Destek Merkezi",
         description=(
-            "Nova Project destek sistemine hoş geldin.\n\n"
-            "Aşağıdaki kategorilerden birini seçerek ticket açabilirsin.\n\n"
-            "⏱ Ortalama cevap süresi: 5-15 dakika"
+            "**Destek Merkezi Hakkında.**\n"
+            "Aşağıdaki seçeneklerden uygun olanı seçerek hemen bir ticket oluşturabilirsiniz.\n\n"
+            "❤️ Sunucu Bilgisi.\n"
+            "Gereksiz ticket açmayın, Sunucu Kurallarını Okumayı Unutmayın."
         ),
         color=0x5865F2
     )
+
+    embed.set_thumbnail(url=interaction.guild.icon.url)
 
     await interaction.response.send_message(
         embed=embed,
@@ -333,18 +391,13 @@ async def on_ready():
 
     await bot.tree.sync()
 
-    # 7/24 SES KANALI
-
     channel = bot.get_channel(VOICE_CHANNEL_ID)
 
     if channel:
 
         if not channel.guild.voice_client:
-
             await channel.connect()
 
-# =========================
-# RUN
 # =========================
 
 bot.run(TOKEN)
