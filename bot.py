@@ -26,6 +26,8 @@ VOICE_CHANNEL_ID = 1482421665890570290
 ISTATISTIK_KANAL_ID = 123456789
 GUILD_ID = 148202000000000000
 
+IZINLI_ROLE = 1482032881265283244  # roldenban kullanabilen
+
 # =========================
 YETKILI_ROLLER = [
     1482030233056968827,
@@ -89,12 +91,7 @@ async def ceza_ver(member, reason):
 class VerifyButton(View):
     def __init__(self):
         super().__init__(timeout=None)
-        button = Button(
-            label="Doğrulan",
-            emoji="✅",
-            style=discord.ButtonStyle.green,
-            custom_id="verify_button"
-        )
+        button = Button(label="Doğrulan", emoji="✅", style=discord.ButtonStyle.green)
         button.callback = self.verify
         self.add_item(button)
 
@@ -157,32 +154,15 @@ class TicketKategori(View):
 class TicketKapat(View):
     def __init__(self):
         super().__init__(timeout=None)
-        button = Button(
-            label="🔒 Ticket Kapat",
-            style=discord.ButtonStyle.red,
-            custom_id="ticket_kapat"
-        )
+        button = Button(label="🔒 Ticket Kapat", style=discord.ButtonStyle.red)
         button.callback = self.close_ticket
         self.add_item(button)
 
     async def close_ticket(self, interaction: discord.Interaction):
         if not is_yetkili(interaction.user):
-            await interaction.response.send_message(
-                "❌ Ticket sadece yetkililer kapatabilir.", ephemeral=True
-            )
+            await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
             return
 
-        log = interaction.guild.get_channel(LOG_CHANNEL_ID)
-
-        if log:
-            embed = discord.Embed(
-                title="🎫 Ticket Kapandı",
-                description=f"{interaction.channel.name} kapatıldı\nYetkili: {interaction.user.mention}",
-                color=0xe74c3c
-            )
-            await log.send(embed=embed)
-
-        await interaction.response.send_message("🔒 Ticket kapatılıyor...")
         await interaction.channel.delete()
 
 # =========================
@@ -192,18 +172,6 @@ async def on_member_join(member):
     role = member.guild.get_role(AUTO_ROLE_ID)
     if role:
         await member.add_roles(role)
-
-    join_tracker.append(time.time())
-    join_tracker[:] = [t for t in join_tracker if time.time()-t < 10]
-
-    if len(join_tracker) >= 7:
-        log = bot.get_channel(LOG_CHANNEL_ID)
-        if log:
-            await log.send("🚨 Anti raid aktif! Çok hızlı giriş algılandı.")
-
-    kanal = bot.get_channel(ISTATISTIK_KANAL_ID)
-    if kanal:
-        await kanal.edit(name=f"👥 Üyeler: {member.guild.member_count}")
 
 # =========================
 # MESAJ
@@ -216,59 +184,75 @@ async def on_message(message):
         await bot.process_commands(message)
         return
 
-    user_id = message.author.id
-    now = time.time()
-
-    spam_tracker.setdefault(user_id, [])
-    spam_tracker[user_id].append(now)
-    spam_tracker[user_id] = [t for t in spam_tracker[user_id] if now - t < 5]
-
-    if len(spam_tracker[user_id]) >= 6:
-        await message.delete()
-        await ceza_ver(message.author,"Spam")
-        return
-
     content = message.content.lower()
 
-    if any(x in content for x in ["discord.gg","http://","https://",".gg/"]):
+    if "http" in content or "discord.gg" in content:
         await message.delete()
         await ceza_ver(message.author,"Reklam")
-        return
-
-    if any(x in content for x in ["amk","aq","orospu","salak"]):
-        await message.delete()
-        await ceza_ver(message.author,"Küfür")
         return
 
     await bot.process_commands(message)
 
 # =========================
-# KOMUTLAR (AYNEN SENİN)
+# KOMUTLAR
+
 @bot.tree.command(name="warnlar", guild=discord.Object(id=GUILD_ID))
 async def warnlar(interaction: discord.Interaction, user: discord.Member):
     warns = warnings.get(user.id, 0)
-    await interaction.response.send_message(
-        f"⚠️ {user.mention} toplam warn: **{warns}**"
-    )
+    await interaction.response.send_message(f"{user.mention} warn: {warns}")
 
 @bot.tree.command(name="ban", guild=discord.Object(id=GUILD_ID))
-async def ban(interaction: discord.Interaction, user: discord.Member, reason: str = "Sebep belirtilmedi"):
+async def ban(interaction: discord.Interaction, user: discord.Member, reason: str = "Sebep yok"):
     if not is_yetkili(interaction.user):
-        await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
+        await interaction.response.send_message("❌ Yetkin yok", ephemeral=True)
+        return
+    await user.ban(reason=reason)
+    await interaction.response.send_message(f"{user.mention} banlandı")
+
+# 🔥 TEMİZLE KOMUTU
+@bot.tree.command(name="temizle", description="Mesaj siler", guild=discord.Object(id=GUILD_ID))
+async def temizle(interaction: discord.Interaction, miktar: int):
+
+    if not is_yetkili(interaction.user):
+        await interaction.response.send_message("❌ Yetkin yok", ephemeral=True)
         return
 
-    await user.ban(reason=reason)
+    await interaction.response.defer(ephemeral=True)
 
-    log = interaction.guild.get_channel(LOG_CHANNEL_ID)
-    if log:
-        embed = discord.Embed(
-            title="🔨 Ban",
-            description=f"{user.mention} banlandı\nYetkili: {interaction.user.mention}\nSebep: {reason}",
-            color=0xe74c3c
-        )
-        await log.send(embed=embed)
+    deleted = await interaction.channel.purge(limit=miktar)
 
-    await interaction.response.send_message(f"{user.mention} banlandı.")
+    await interaction.followup.send(f"🧹 {len(deleted)} mesaj silindi", ephemeral=True)
+
+# 🔥 ROLDEN BAN
+@bot.tree.command(name="roldenban", guild=discord.Object(id=GUILD_ID))
+async def roldenban(interaction: discord.Interaction):
+
+    if not any(role.id == IZINLI_ROLE for role in interaction.user.roles):
+        await interaction.response.send_message("❌ Kullanamazsın", ephemeral=True)
+        return
+
+    TARGET_ROLE_ID = 1482031063936139264
+    role = interaction.guild.get_role(TARGET_ROLE_ID)
+
+    members = role.members
+
+    await interaction.response.send_message(f"{len(members)} kişi banlanacak. onay yaz", ephemeral=True)
+
+    def check(m):
+        return m.author == interaction.user and m.content.lower() == "onay"
+
+    try:
+        await bot.wait_for("message", timeout=15, check=check)
+    except:
+        return
+
+    for m in members:
+        try:
+            await m.ban(reason="Toplu ban")
+        except:
+            pass
+
+    await interaction.followup.send("✅ Bitti", ephemeral=True)
 
 # =========================
 @bot.event
@@ -282,7 +266,6 @@ async def on_ready():
     guild = bot.get_guild(GUILD_ID)
     if guild:
         await bot.tree.sync(guild=guild)
-        print("Komutlar senkronize edildi")
 
 # =========================
 bot.run(TOKEN)
