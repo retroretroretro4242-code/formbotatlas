@@ -14,12 +14,16 @@ TOKEN = os.getenv("TOKEN")
 WELCOME_CHANNEL_ID = 1482033833091010661
 LOG_CHANNEL_ID = 1482028188639952933
 
+VERIFY_CHANNEL_ID = 1482031063936139264
 VERIFY_ROLE_ID = 1482021882378059876
+
 AUTO_ROLE_ID = 1482031140897292563
 
 TICKET_KATEGORI_ID = 1482030116036149319
-ISTATISTIK_KANAL_ID = 123456789
 
+VOICE_CHANNEL_ID = 1482421665890570290
+
+ISTATISTIK_KANAL_ID = 123456789
 GUILD_ID = 148202000000000000
 
 # =========================
@@ -29,10 +33,8 @@ YETKILI_ROLLER = [
 ]
 
 # =========================
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 intents.message_content = True
-intents.members = True
-intents.guilds = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -61,13 +63,13 @@ async def ceza_ver(member, reason):
 
     if level == 1:
         duration = timedelta(minutes=5)
-        text = "1. uyarı → 5 dk timeout"
+        text = "1. Uyarı → 5 dakika timeout"
     elif level == 2:
         duration = timedelta(minutes=10)
-        text = "2. uyarı → 10 dk timeout"
+        text = "2. Uyarı → 10 dakika timeout"
     else:
         duration = timedelta(days=1)
-        text = "3. uyarı → 1 gün mute"
+        text = "3. Uyarı → 1 gün mute"
 
     try:
         await member.timeout(duration, reason=reason)
@@ -76,7 +78,7 @@ async def ceza_ver(member, reason):
 
     if log:
         embed = discord.Embed(
-            title="⚠️ Ceza Sistemi",
+            title="⚠️ Otomatik Ceza",
             description=f"{member.mention}\n{text}\nSebep: {reason}",
             color=0xe67e22
         )
@@ -87,12 +89,18 @@ async def ceza_ver(member, reason):
 class VerifyButton(View):
     def __init__(self):
         super().__init__(timeout=None)
+        button = Button(
+            label="Doğrulan",
+            emoji="✅",
+            style=discord.ButtonStyle.green,
+            custom_id="verify_button"
+        )
+        button.callback = self.verify
+        self.add_item(button)
 
-    @discord.ui.button(label="Doğrulan", style=discord.ButtonStyle.green, emoji="✅", custom_id="verify")
-    async def verify(self, interaction: discord.Interaction, button: Button):
+    async def verify(self, interaction: discord.Interaction):
         role = interaction.guild.get_role(VERIFY_ROLE_ID)
-        if role:
-            await interaction.user.add_roles(role)
+        await interaction.user.add_roles(role)
         await interaction.response.send_message("✅ Doğrulandın!", ephemeral=True)
 
 # =========================
@@ -101,12 +109,25 @@ class TicketKategori(View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    async def create_ticket(self, interaction):
+        buttons = [
+            ("💰 Sipariş","ticket_siparis",discord.ButtonStyle.green),
+            ("🛠 Destek","ticket_destek",discord.ButtonStyle.blurple),
+            ("📦 Proje","ticket_proje",discord.ButtonStyle.gray),
+            ("🎁 Ücretsiz","ticket_ucretsiz",discord.ButtonStyle.success),
+            ("❓ Diğer","ticket_diger",discord.ButtonStyle.red)
+        ]
+
+        for label,cid,style in buttons:
+            button = Button(label=label, custom_id=cid, style=style)
+            button.callback = self.create_ticket
+            self.add_item(button)
+
+    async def create_ticket(self, interaction: discord.Interaction):
         global ticket_counter
         ticket_counter += 1
 
-        with open("ticket.json", "w") as f:
-            json.dump(ticket_counter, f)
+        with open("ticket.json","w") as f:
+            json.dump(ticket_counter,f)
 
         kategori = interaction.guild.get_channel(TICKET_KATEGORI_ID)
 
@@ -132,42 +153,36 @@ class TicketKategori(View):
             ephemeral=True
         )
 
-    @discord.ui.button(label="💰 Sipariş", style=discord.ButtonStyle.green)
-    async def siparis(self, interaction, button):
-        await self.create_ticket(interaction)
-
-    @discord.ui.button(label="🛠 Destek", style=discord.ButtonStyle.blurple)
-    async def destek(self, interaction, button):
-        await self.create_ticket(interaction)
-
-    @discord.ui.button(label="📦 Proje", style=discord.ButtonStyle.gray)
-    async def proje(self, interaction, button):
-        await self.create_ticket(interaction)
-
-    @discord.ui.button(label="🎁 Ücretsiz", style=discord.ButtonStyle.success)
-    async def ucretsiz(self, interaction, button):
-        await self.create_ticket(interaction)
-
-    @discord.ui.button(label="❓ Diğer", style=discord.ButtonStyle.red)
-    async def diger(self, interaction, button):
-        await self.create_ticket(interaction)
-
 # =========================
 class TicketKapat(View):
     def __init__(self):
         super().__init__(timeout=None)
+        button = Button(
+            label="🔒 Ticket Kapat",
+            style=discord.ButtonStyle.red,
+            custom_id="ticket_kapat"
+        )
+        button.callback = self.close_ticket
+        self.add_item(button)
 
-    @discord.ui.button(label="🔒 Ticket Kapat", style=discord.ButtonStyle.red)
-    async def close(self, interaction, button):
+    async def close_ticket(self, interaction: discord.Interaction):
         if not is_yetkili(interaction.user):
-            await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
+            await interaction.response.send_message(
+                "❌ Ticket sadece yetkililer kapatabilir.", ephemeral=True
+            )
             return
 
         log = interaction.guild.get_channel(LOG_CHANNEL_ID)
-        if log:
-            await log.send(f"🎫 {interaction.channel.name} kapatıldı ({interaction.user})")
 
-        await interaction.response.send_message("Kapatılıyor...")
+        if log:
+            embed = discord.Embed(
+                title="🎫 Ticket Kapandı",
+                description=f"{interaction.channel.name} kapatıldı\nYetkili: {interaction.user.mention}",
+                color=0xe74c3c
+            )
+            await log.send(embed=embed)
+
+        await interaction.response.send_message("🔒 Ticket kapatılıyor...")
         await interaction.channel.delete()
 
 # =========================
@@ -184,14 +199,14 @@ async def on_member_join(member):
     if len(join_tracker) >= 7:
         log = bot.get_channel(LOG_CHANNEL_ID)
         if log:
-            await log.send("🚨 Anti raid aktif!")
+            await log.send("🚨 Anti raid aktif! Çok hızlı giriş algılandı.")
 
     kanal = bot.get_channel(ISTATISTIK_KANAL_ID)
     if kanal:
         await kanal.edit(name=f"👥 Üyeler: {member.guild.member_count}")
 
 # =========================
-# MESAJ KORUMA
+# MESAJ
 @bot.event
 async def on_message(message):
     if message.author.bot:
@@ -210,60 +225,64 @@ async def on_message(message):
 
     if len(spam_tracker[user_id]) >= 6:
         await message.delete()
-        await ceza_ver(message.author, "Spam")
+        await ceza_ver(message.author,"Spam")
         return
 
     content = message.content.lower()
 
-    if any(x in content for x in ["discord.gg", "http://", "https://"]):
+    if any(x in content for x in ["discord.gg","http://","https://",".gg/"]):
         await message.delete()
-        await ceza_ver(message.author, "Reklam")
+        await ceza_ver(message.author,"Reklam")
         return
 
-    if any(x in content for x in ["amk", "aq", "salak"]):
+    if any(x in content for x in ["amk","aq","orospu","salak"]):
         await message.delete()
-        await ceza_ver(message.author, "Küfür")
+        await ceza_ver(message.author,"Küfür")
         return
 
     await bot.process_commands(message)
 
 # =========================
-# KOMUTLAR
-@bot.tree.command(name="warnlar")
+# KOMUTLAR (AYNEN SENİN)
+@bot.tree.command(name="warnlar", guild=discord.Object(id=GUILD_ID))
 async def warnlar(interaction: discord.Interaction, user: discord.Member):
     warns = warnings.get(user.id, 0)
     await interaction.response.send_message(
-        f"⚠️ {user.mention} warn: {warns}"
+        f"⚠️ {user.mention} toplam warn: **{warns}**"
     )
 
-@bot.tree.command(name="ban")
-async def ban(interaction: discord.Interaction, user: discord.Member, reason: str = "Sebep yok"):
+@bot.tree.command(name="ban", guild=discord.Object(id=GUILD_ID))
+async def ban(interaction: discord.Interaction, user: discord.Member, reason: str = "Sebep belirtilmedi"):
     if not is_yetkili(interaction.user):
-        await interaction.response.send_message("❌ Yetkin yok", ephemeral=True)
+        await interaction.response.send_message("❌ Yetkin yok.", ephemeral=True)
         return
 
     await user.ban(reason=reason)
 
     log = interaction.guild.get_channel(LOG_CHANNEL_ID)
     if log:
-        await log.send(f"🔨 {user} banlandı | Yetkili: {interaction.user} | Sebep: {reason}")
+        embed = discord.Embed(
+            title="🔨 Ban",
+            description=f"{user.mention} banlandı\nYetkili: {interaction.user.mention}\nSebep: {reason}",
+            color=0xe74c3c
+        )
+        await log.send(embed=embed)
 
-    await interaction.response.send_message(f"{user.mention} banlandı")
-
-# =========================
-@bot.event
-async def setup_hook():
-    await bot.tree.sync()
-    print("Slash komutlar yüklendi")
+    await interaction.response.send_message(f"{user.mention} banlandı.")
 
 # =========================
 @bot.event
 async def on_ready():
-    print(f"Bot aktif: {bot.user}")
+    print(f"Bot hazır: {bot.user}")
 
     bot.add_view(VerifyButton())
     bot.add_view(TicketKategori())
     bot.add_view(TicketKapat())
+
+    guild = bot.get_guild(GUILD_ID)
+    if guild:
+        await bot.tree.sync(guild=guild)
+        print("Komutlar senkronize edildi")
 
 # =========================
 bot.run(TOKEN)
